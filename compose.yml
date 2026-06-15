@@ -1,0 +1,47 @@
+version: '3.9'
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: .docker/local/nginx/Dockerfile
+    platform: linux/arm64/v8
+    container_name: scene-speak-api-server-nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public:/app/public
+      - ./.docker/local/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
+  app:
+    build:
+      context: .
+      dockerfile: .docker/local/php/Dockerfile
+    container_name: scene-speak-api-server-app
+    volumes:
+      - ".:/app"
+      - "./.docker/local/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+    ports:
+      - "9000:9000"
+    depends_on:
+      - mysql
+  mysql:
+    build:
+      context: .
+      dockerfile: .docker/local/mysql/Dockerfile
+    container_name: scene-speak-api-server-mysql
+    platform: linux/amd64
+    ports:
+      - "3306:3306"
+    volumes:
+      - ".docker/local/mysql/my.cnf:/etc/mysql/my.cnf"
+      - "mysql_data:/var/lib/mysql"
+      - ".docker/local/mysql/create-testing-database.sql:/docker-entrypoint-ini\
+        tdb.d/mysql-docker-entrypoint.sql"
+    environment:
+      MYSQL_DATABASE: scene_speak_api_server
+      MYSQL_USER: scene_speak_api_server
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root
+volumes:
+  mysql_data:
