@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Models\EnglishLevel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class EnglishLevelFactory extends Factory

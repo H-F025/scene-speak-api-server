@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('english_levels', function (Blueprint $table) {
-            $table->unsignedTinyInteger('id')->autoIncrement();
+            $table->tinyIncrements('id');
             $table->string('code', 50)->unique();
             $table->string('name', 50);
             $table->string('description', 255);
