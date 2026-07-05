@@ -14,6 +14,8 @@ Route::prefix('v1')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
         });
 
+    Route::get('english-levels', [EnglishLevelController::class, 'index']);
         Route::get('english-levels', [EnglishLevelController::class, 'index']);
+            Route::patch('me/english-level', [EnglishLevelController::class, 'update']); // 追加
     });
 });
