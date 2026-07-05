@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(EnglishLevelSeeder::class);
         $this->call(ThemeSeeder::class);
+        $this->call(QuestionSeeder::class);
 
         User::updateOrCreate(
             [
