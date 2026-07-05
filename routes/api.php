@@ -4,6 +4,7 @@ use App\Http\Controllers\EnglishLevelController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\LearningSessionController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -22,5 +23,7 @@ Route::prefix('v1')->group(function () {
         Route::get('themes', [ThemeController::class, 'index']); // ← 追加
 
         Route::get('themes/{theme_level_id}/questions', [QuestionController::class, 'index']);
+
+        Route::post('learning-sessions', [LearningSessionController::class, 'store']);
     });
 });
