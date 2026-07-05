@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class ThemeLevel extends Model
 {
@@ -18,5 +19,10 @@ class ThemeLevel extends Model
     public function englishLevel(): BelongsTo
     {
         return $this->belongsTo(EnglishLevel::class);
+    }
+
+    public function questions(): HasMany
+    {
+        return $this->hasMany(Question::class);
     }
 }
