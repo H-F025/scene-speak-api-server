@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\EnglishLevel;
 use App\Models\User;
+use App\Models\EnglishLevel;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -13,12 +13,17 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-    $this->call(EnglishLevelSeeder::class);
+        $this->call(EnglishLevelSeeder::class);
+        $this->call(ThemeSeeder::class);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-            'english_level_id' => EnglishLevel::where('code', 'beginner')->value('id'),
-        ]);
+        User::updateOrCreate(
+            [
+                'email' => 'test@example.com',
+            ],
+            [
+                'name' => 'Test User',
+                'english_level_id' => EnglishLevel::where('code', 'beginner')->value('id'),
+            ]
+        );
     }
 }
