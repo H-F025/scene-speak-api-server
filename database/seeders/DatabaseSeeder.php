@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
     $this->call(EnglishLevelSeeder::class);
+    $this->call(ThemeSeeder::class); // ← 追加
 
         User::factory()->create([
             'name' => 'Test User',
