@@ -7,6 +7,7 @@ use App\Models\LearningSession;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class LearningSessionController extends Controller
 {
@@ -105,5 +106,30 @@ class LearningSessionController extends Controller
         return response()->json([
             'learning_session_id' => $learningSession->id,
         ], 201);
+    }
+
+    public function heartbeat(Request $request, int $learning_session_id): JsonResponse
+    {
+    $user = Auth::user();
+
+    $learningSession = LearningSession::where('id', $learning_session_id)
+        ->where('user_id', $user->id)
+        ->first();
+
+    if (! $learningSession) {
+        return response()->json(['message' => '学習セッションが見つかりません。'], 404);
+    }
+
+    if ($learningSession->status !== 'in_progress') {
+        return response()->json(['message' => 'この学習セッションはすでに終了しています。'], 409);
+    }
+
+    $learningSession->update([
+        'last_activity_at' => CarbonImmutable::now(),
+    ]);
+
+    return response()->json([
+        'learning_session_id' => $learningSession->id,
+    ]);
     }
 }

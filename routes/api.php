@@ -25,5 +25,6 @@ Route::prefix('v1')->group(function () {
         Route::get('themes/{theme_level_id}/questions', [QuestionController::class, 'index']);
 
         Route::post('learning-sessions', [LearningSessionController::class, 'store']);
+        Route::post('learning-sessions/{learning_session_id}/heartbeat', [LearningSessionController::class, 'heartbeat']);
     });
 });
