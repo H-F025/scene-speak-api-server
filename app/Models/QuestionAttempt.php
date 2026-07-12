@@ -2,22 +2,24 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Guarded;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Attributes\Guarded;
 
 #[Guarded(['id', 'created_at', 'updated_at'])]
-    class QuestionProgress extends Model
-    {
+class QuestionAttempt extends Model
+{
     use HasFactory;
-
-    // progressesは不可算名詞のため、Laravelが複数形を識別できないため、テーブル名を明示する
-    protected $table = 'question_progresses';
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function learningSession(): BelongsTo
+    {
+        return $this->belongsTo(LearningSession::class);
     }
 
     public function question(): BelongsTo
@@ -25,8 +27,8 @@ use Illuminate\Database\Eloquent\Attributes\Guarded;
         return $this->belongsTo(Question::class);
     }
 
-    public function themeLearningProgress(): BelongsTo
+    public function questionChoice(): BelongsTo
     {
-        return $this->belongsTo(ThemeLearningProgress::class);
+        return $this->belongsTo(QuestionChoice::class);
     }
 }

@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\EnglishLevel;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -18,15 +17,6 @@ class DatabaseSeeder extends Seeder
         $this->call(ThemeSeeder::class);
         $this->call(QuestionSeeder::class);
 
-        User::updateOrCreate(
-            [
-                'email' => 'test@example.com',
-            ],
-            [
-                'name' => 'Test User',
-                'english_level_id' => EnglishLevel::where('code', 'beginner')->value('id'),
-                'password' => Hash::make('password'),
-            ]
-        );
+    User::factory()->create(['english_level_id' => EnglishLevel::first()->id]);
     }
 }
