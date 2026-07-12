@@ -9,6 +9,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use App\Models\LearningSession;
 use App\Models\Question;
+use App\Http\Requests\StoreQuestionAnswerRequest;
+use App\Models\QuestionAttempt;
+use App\Models\ReviewQuestionState;
 
 class QuestionController extends Controller
 {
@@ -208,6 +211,165 @@ class QuestionController extends Controller
             'hint' => $question->hint,
             'choices' => $choices,
         ],
+    ]);
+    }
+    public function answer(StoreQuestionAnswerRequest $request, int $learningSessionId, int $questionId): JsonResponse
+    {
+    $user = Auth::user();
+
+    $learningSession = LearningSession::where('id', $learningSessionId)
+        ->where('user_id', $user->id)
+        ->first();
+
+    if (! $learningSession) {
+        return response()->json([
+            'message' => '学習セッションが見つかりません。',
+        ], 404);
+    }
+
+    if ($learningSession->status !== 'in_progress') {
+        return response()->json([
+            'message' => 'この学習セッションはすでに終了しています。',
+        ], 409);
+    }
+
+    $question = Question::find($questionId);
+
+    if (! $question) {
+        return response()->json([
+            'message' => '問題が見つかりません。',
+        ], 404);
+    }
+
+    if ($question->theme_level_id !== $learningSession->learning_target_id) {
+        return response()->json([
+            'message' => 'この学習セッションでは指定された問題を表示できません。',
+        ], 403);
+    }
+
+    $questionChoiceId = $request->input('question_choice_id');
+    $choice = $question->choices()->where('id', $questionChoiceId)->first();
+
+    if (! $choice) {
+        return response()->json([
+            'message' => '入力内容に誤りがあります。',
+            'errors' => [
+                'question_choice_id' => ['指定された選択肢はこの問題に含まれていません。'],
+            ],
+        ], 422);
+    }
+
+    $isCorrect = $choice->is_correct;
+    $now = now();
+
+    $questionAttempt = QuestionAttempt::create([
+        'user_id' => $user->id,
+        'learning_session_id' => $learningSession->id,
+        'question_id' => $question->id,
+        'question_choice_id' => $choice->id,
+        'attempt_type' => 'theme',
+        'is_correct' => $isCorrect,
+        'answered_at' => $now,
+    ]);
+
+    $themeLearningProgress = ThemeLearningProgress::where('user_id', $user->id)
+        ->where('theme_level_id', $question->theme_level_id)
+        ->first();
+
+    if (! $themeLearningProgress) {
+        $themeLearningProgress = ThemeLearningProgress::create([
+            'user_id' => $user->id,
+            'theme_level_id' => $question->theme_level_id,
+            'status' => 'in_progress',
+            'completed_problem_count' => 0,
+            'study_seconds' => 0,
+            'last_studied_at' => $now,
+        ]);
+    }
+
+    $existingProgress = QuestionProgress::where('user_id', $user->id)
+        ->where('question_id', $question->id)
+        ->where('theme_learning_progress_id', $themeLearningProgress->id)
+        ->first();
+
+    $isFirstAnswer = ! $existingProgress;
+
+    if ($existingProgress) {
+        $existingProgress->update([
+            'is_correct' => $isCorrect,
+            'completed_at' => $now,
+        ]);
+    } else {
+        QuestionProgress::create([
+            'user_id' => $user->id,
+            'question_id' => $question->id,
+            'theme_learning_progress_id' => $themeLearningProgress->id,
+            'is_completed' => true,
+            'is_correct' => $isCorrect,
+            'completed_at' => $now,
+        ]);
+    }
+
+    if (! $isCorrect) {
+        $reviewState = ReviewQuestionState::where('user_id', $user->id)
+            ->where('question_id', $question->id)
+            ->first();
+
+        if ($reviewState) {
+            $reviewState->update([
+                'status' => 'needs_review',
+                'incorrect_count' => $reviewState->incorrect_count + 1,
+            ]);
+        } else {
+            ReviewQuestionState::create([
+                'user_id' => $user->id,
+                'question_id' => $question->id,
+                'status' => 'needs_review',
+                'resolved_at' => null,
+                'incorrect_count' => 1,
+            ]);
+        }
+    }
+
+    if ($isCorrect) {
+        $reviewState = ReviewQuestionState::where('user_id', $user->id)
+            ->where('question_id', $question->id)
+            ->where('status', 'needs_review')
+            ->first();
+
+        if ($reviewState) {
+            $reviewState->update([
+                'status' => 'resolved',
+                'resolved_at' => $now,
+            ]);
+        }
+    }
+
+    $newCompletedProblemCount = $themeLearningProgress->completed_problem_count;
+    if ($isFirstAnswer) {
+        $newCompletedProblemCount++;
+    }
+
+    $totalQuestionCount = Question::where('theme_level_id', $question->theme_level_id)->count();
+
+    $updateData = [
+        'completed_problem_count' => $newCompletedProblemCount,
+        'last_studied_at' => $now,
+    ];
+
+    if ($totalQuestionCount > 0 && $newCompletedProblemCount >= $totalQuestionCount) {
+        $updateData['status'] = 'completed';
+        $updateData['completed_at'] = $now;
+    }
+
+    $themeLearningProgress->update($updateData);
+
+    $learningSession->update([
+        'last_activity_at' => $now,
+    ]);
+
+    return response()->json([
+        'question_attempt_id' => $questionAttempt->id,
     ]);
     }
 }
