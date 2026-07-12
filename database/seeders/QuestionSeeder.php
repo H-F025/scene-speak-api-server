@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\EnglishLevel;
 use App\Models\Question;
+use App\Models\QuestionChoice;
 use App\Models\Theme;
 use App\Models\ThemeLevel;
 use Illuminate\Database\Seeder;
@@ -25,7 +26,7 @@ class QuestionSeeder extends Seeder
                 $questions = $this->getQuestions($theme->name, $englishLevel->code);
                 // 問題データをDBに登録する（既存データがあれば更新する）
                 foreach ($questions as $questionData) {
-                    Question::updateOrCreate(
+                    $question = Question::updateOrCreate(
                         [
                             'theme_level_id' => $themeLevel->id,
                             'number' => $questionData['number'],
@@ -42,6 +43,8 @@ class QuestionSeeder extends Seeder
                             'sort_order' => $questionData['number'],
                         ]
                     );
+                     // 問題に紐づく選択肢を登録する
+                    $this->saveQuestionChoices($question, $questionData);
                 }
             }
         }
@@ -347,5 +350,64 @@ class QuestionSeeder extends Seeder
             'correct_explanation' => 'この表現は、場面に合った自然な英語です。',
             'incorrect_explanation' => '意味は近くても、より自然で丁寧な表現を選ぶ必要があります。',
         ];
+    }
+
+    // 問題に紐づく選択肢を登録する
+    private function saveQuestionChoices(Question $question, array $questionData): void
+    {
+        // 選択肢を作成する
+        $choices = $this->makeQuestionChoices($questionData);
+
+        foreach ($choices as $choice) {
+            QuestionChoice::updateOrCreate(
+                [
+                    'question_id' => $question->id,
+                    'sort_order' => $choice['sort_order'],
+                ],
+                [
+                    'content' => $choice['content'],
+                    'is_correct' => $choice['is_correct'],
+                ]
+            );
+        }
+    }
+
+    // 選択肢データを作成する
+    private function makeQuestionChoices(array $questionData): array
+    {
+        // 正解の位置を問題番号ごとにずらす
+        // これにより、毎回1番目が正解になることを防ぐ
+        $correctSortOrder = (($questionData['number'] - 1) % 4) + 1;
+
+        $wrongChoices = [
+            $questionData['wrong_choice_1'],
+            $questionData['wrong_choice_2'],
+            $questionData['wrong_choice_3'],
+        ];
+
+        $choices = [];
+        $wrongChoiceIndex = 0;
+
+        for ($sortOrder = 1; $sortOrder <= 4; $sortOrder++) {
+            if ($sortOrder === $correctSortOrder) {
+                $choices[] = [
+                    'content' => $questionData['correct_choice'],
+                    'is_correct' => true,
+                    'sort_order' => $sortOrder,
+                ];
+
+                continue;
+            }
+
+            $choices[] = [
+                'content' => $wrongChoices[$wrongChoiceIndex],
+                'is_correct' => false,
+                'sort_order' => $sortOrder,
+            ];
+
+            $wrongChoiceIndex++;
+        }
+
+        return $choices;
     }
 }
