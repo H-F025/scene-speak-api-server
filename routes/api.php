@@ -28,5 +28,6 @@ Route::prefix('v1')->group(function () {
         Route::post('learning-sessions/{learning_session_id}/heartbeat', [LearningSessionController::class, 'heartbeat']);
         Route::get('learning-sessions/{learning_session_id}/questions/{question_id}', [QuestionController::class, 'show']);
         Route::post('learning-sessions/{learning_session_id}/questions/{question_id}/answer', [QuestionController::class, 'answer']);
+        Route::get('question-attempts/{question_attempt_id}', [QuestionController::class, 'feedback']);
     });
 });

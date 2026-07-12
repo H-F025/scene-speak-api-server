@@ -372,4 +372,78 @@ class QuestionController extends Controller
         'question_attempt_id' => $questionAttempt->id,
     ]);
     }
+
+    public function feedback(int $questionAttemptId): JsonResponse
+    {
+    $user = Auth::user();
+
+    $now = now();
+
+    $questionAttempt = QuestionAttempt::where('id', $questionAttemptId)
+        ->where('user_id', $user->id)
+        ->first();
+
+    if (! $questionAttempt) {
+        return response()->json([
+            'message' => '回答結果が見つかりません。',
+        ], 404);
+    }
+
+    $learningSession = $questionAttempt->learningSession;
+
+    if (! $learningSession) {
+        return response()->json([
+            'message' => '学習セッションが見つかりません。',
+        ], 404);
+    }
+
+    if ($learningSession->status === 'in_progress') {
+        $learningSession->update([
+            'last_activity_at' => $now,
+        ]);
+    }
+
+    $question = $questionAttempt->question;
+    $selectedChoice = $questionAttempt->questionChoice;
+    $learningSession = $questionAttempt->learningSession;
+
+    $correctChoice = $question->choices()->where('is_correct', true)->first();
+
+    $isCorrect = false;
+
+    if ($questionAttempt->is_correct) {
+        $isCorrect = true;
+    }
+
+    $explanation = $question->incorrect_explanation;
+
+    if ($isCorrect) {
+        $explanation = $question->correct_explanation;
+    }
+
+    $nextQuestion = Question::where('theme_level_id', $question->theme_level_id)
+        ->where('sort_order', '>', $question->sort_order)
+        ->orderBy('sort_order', 'asc')
+        ->first();
+
+    $learningSession->update(['last_activity_at' => now()]);
+
+    return response()->json([
+        'question_attempt_id' => $questionAttempt->id,
+        'learning_session_id' => $learningSession->id,
+        'next_question_id' => $nextQuestion?->id,
+        'result' => [
+            'is_correct' => (bool) $questionAttempt->is_correct,
+            'selected_choice' => [
+                'id' => $selectedChoice->id,
+                'content' => $selectedChoice->content,
+            ],
+            'correct_choice' => [
+                'id' => $correctChoice->id,
+                'content' => $correctChoice->content,
+            ],
+            'explanation' => $explanation,
+            ],
+        ]);
+    }
 }
