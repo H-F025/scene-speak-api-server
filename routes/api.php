@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\LearningSessionController;
+use App\Http\Controllers\ReviewSetController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -29,5 +30,6 @@ Route::prefix('v1')->group(function () {
         Route::get('learning-sessions/{learning_session_id}/questions/{question_id}', [QuestionController::class, 'show']);
         Route::post('learning-sessions/{learning_session_id}/questions/{question_id}/answer', [QuestionController::class, 'answer']);
         Route::get('question-attempts/{question_attempt_id}', [QuestionController::class, 'feedback']);
+        Route::get('review-sets', [ReviewSetController::class, 'index']);
     });
 });
