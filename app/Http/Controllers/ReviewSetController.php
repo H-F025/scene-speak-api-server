@@ -6,12 +6,16 @@ use App\Models\Question;
 use App\Models\ReviewQuestionState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Models\ReviewSet;
+use App\Models\ReviewSetQuestion;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Auth;
 
 class ReviewSetController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $user = $request->user();
+        $user = Auth::user();
 
         $from = now()->subDays(6)->startOfDay();
 
@@ -114,5 +118,75 @@ class ReviewSetController extends Controller
             'estimated_minutes' => $estimatedMinutes,
             'categories' => $categories,
         ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+    $user = Auth::user();
+
+    // 今日を含む直近7日間の開始日時
+    $from = CarbonImmutable::now()->subDays(6)->startOfDay();
+    $to = CarbonImmutable::now();
+
+    // 復習が必要な問題を直近で間違えた順に最大8件取得する
+    $reviewQuestionStates = ReviewQuestionState::where('user_id', $user->id)
+        ->where('status', 'needs_review')
+        ->where('updated_at', '>=', $from)
+        ->orderBy('updated_at', 'desc')
+        ->limit(8)
+        ->get();
+
+    $questionCount = $reviewQuestionStates->count();
+
+    if ($questionCount === 0) {
+        return response()->json(['message' => '現在、復習できる問題がありません。'], 409);
+    }
+
+    // 問題数に応じて優先度を決める
+    if ($questionCount <= 2) {
+        $priority = 'low';
+    } elseif ($questionCount <= 5) {
+        $priority = 'medium';
+    } else {
+        $priority = 'high';
+    }
+
+    $estimatedSeconds = $questionCount * 45;
+
+    // 復習セットを作成する
+    $reviewSet = ReviewSet::create([
+        'user_id' => $user->id,
+        'status' => 'created',
+        'target_from_at' => $from,
+        'target_to_at' => $to,
+        'target_question_count' => $questionCount,
+        'priority' => $priority,
+        'estimated_seconds' => $estimatedSeconds,
+        'correct_count' => 0,
+        'incorrect_count' => 0,
+        'skipped_count' => 0,
+    ]);
+
+    // 復習問題を出題順付きで作成する
+    $firstReviewSetQuestionId = null;
+    foreach ($reviewQuestionStates as $index => $reviewQuestionState) {
+        $reviewSetQuestion = ReviewSetQuestion::create([
+            'review_set_id' => $reviewSet->id,
+            'question_id' => $reviewQuestionState->question_id,
+            'question_attempt_id' => null,
+            'order_no' => $index + 1,
+            'result' => 'not_answered',
+            'answered_at' => null,
+        ]);
+
+        if ($index === 0) {
+            $firstReviewSetQuestionId = $reviewSetQuestion->id;
+        }
+    }
+
+    return response()->json([
+        'review_set_id' => $reviewSet->id,
+        'first_review_set_question_id' => $firstReviewSetQuestionId,
+        ], 201);
     }
 }
