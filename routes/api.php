@@ -31,5 +31,6 @@ Route::prefix('v1')->group(function () {
         Route::post('learning-sessions/{learning_session_id}/questions/{question_id}/answer', [QuestionController::class, 'answer']);
         Route::get('question-attempts/{question_attempt_id}', [QuestionController::class, 'feedback']);
         Route::get('review-sets', [ReviewSetController::class, 'index']);
+        Route::post('review-sets', [ReviewSetController::class, 'store']);
     });
 });
