@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LearningSession;
 use App\Models\Question;
 use App\Models\ReviewQuestionState;
 use Illuminate\Http\JsonResponse;
@@ -188,5 +189,81 @@ class ReviewSetController extends Controller
         'review_set_id' => $reviewSet->id,
         'first_review_set_question_id' => $firstReviewSetQuestionId,
         ], 201);
+    }
+
+    public function showQuestion(int $reviewSetId, int $reviewSetQuestionId): JsonResponse
+    {
+    $user = Auth::user();
+
+    // ログインユーザーの復習セットか確認する
+    $reviewSet = ReviewSet::where('id', $reviewSetId)
+        ->where('user_id', $user->id)
+        ->first();
+
+    if (! $reviewSet) {
+        return response()->json(['message' => '復習問題が見つかりません。'], 404);
+    }
+
+    // 指定された復習問題がこの復習セットに含まれるか確認する
+    $reviewSetQuestion = ReviewSetQuestion::where('id', $reviewSetQuestionId)
+        ->where('review_set_id', $reviewSet->id)
+        ->first();
+
+    if (! $reviewSetQuestion) {
+        return response()->json(['message' => '復習問題が見つかりません。'], 404);
+    }
+
+    // 問題のカテゴリを取得する（sort_order が小さい順で最初の1件）
+    $question = $reviewSetQuestion->question;
+    $category = $question->categories()->orderBy('sort_order', 'asc')->first();
+    $categoryName = $category ? $category->name : null;
+
+    // 復習セット内の進捗を計算する
+    $totalQuestionCount = $reviewSet->target_question_count;
+    $completedQuestionCount = $reviewSet->reviewSetQuestions()
+        ->where('result', '!=', 'not_answered')
+        ->count();
+    $remainingQuestionCount = $totalQuestionCount - $completedQuestionCount;
+
+    // 対応する学習セッションが in_progress の場合、last_activity_at を更新する
+    $learningSession = LearningSession::where('user_id', $user->id)
+        ->where('learning_target_type', 'review')
+        ->where('learning_target_id', $reviewSet->id)
+        ->where('status', 'in_progress')
+        ->first();
+
+    if ($learningSession) {
+        $learningSession->update(['last_activity_at' => now()]);
+    }
+
+    // 問題に紐づく選択肢を表示順で取得する
+    $choices = [];
+    foreach ($question->choices()->orderBy('sort_order', 'asc')->get() as $choice) {
+        $choices[] = [
+            'id' => $choice->id,
+            'content' => $choice->content,
+        ];
+    }
+
+    return response()->json([
+        'review_set_id' => $reviewSet->id,
+        'category_name' => $categoryName,
+        'progress' => [
+            'current_question_number' => $reviewSetQuestion->order_no,
+            'total_question_count' => $totalQuestionCount,
+            'completed_question_count' => $completedQuestionCount,
+            'remaining_question_count' => $remainingQuestionCount,
+        ],
+        'question' => [
+            'id' => $question->id,
+            'title' => $question->title,
+            'scene_label' => $question->scene_label,
+            'partner_message' => $question->partner_message,
+            'instruction' => $question->instruction,
+            'question_text' => $question->question,
+            'hint' => $question->hint,
+            'choices' => $choices,
+            ],
+        ]);
     }
 }

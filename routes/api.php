@@ -32,5 +32,6 @@ Route::prefix('v1')->group(function () {
         Route::get('question-attempts/{question_attempt_id}', [QuestionController::class, 'feedback']);
         Route::get('review-sets', [ReviewSetController::class, 'index']);
         Route::post('review-sets', [ReviewSetController::class, 'store']);
+        Route::get('review-sets/{review_set_id}/questions/{review_set_question_id}', [ReviewSetController::class, 'showQuestion']);
     });
 });
