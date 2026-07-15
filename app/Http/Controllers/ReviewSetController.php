@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreReviewSetAnswerRequest;
 use App\Models\LearningSession;
 use App\Models\Question;
+use App\Models\QuestionAttempt;
 use App\Models\ReviewQuestionState;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -265,5 +267,147 @@ class ReviewSetController extends Controller
             'choices' => $choices,
             ],
         ]);
+    }
+
+    public function answerQuestion(StoreReviewSetAnswerRequest $request, int $reviewSetId, int $reviewSetQuestionId): JsonResponse
+    {
+    $user = Auth::user();
+
+    // ログインユーザーの復習セットか確認する
+    $reviewSet = ReviewSet::where('id', $reviewSetId)
+        ->where('user_id', $user->id)
+        ->first();
+
+    if (! $reviewSet) {
+        return response()->json(['message' => '復習問題が見つかりません。'], 404);
+    }
+
+    // 指定された復習問題がこの復習セットに含まれるか確認する
+    $reviewSetQuestion = ReviewSetQuestion::where('id', $reviewSetQuestionId)
+        ->where('review_set_id', $reviewSet->id)
+        ->first();
+
+    if (! $reviewSetQuestion) {
+        return response()->json(['message' => '復習問題が見つかりません。'], 404);
+    }
+
+    // 解答済みの場合はエラーを返す
+    if ($reviewSetQuestion->result !== 'not_answered') {
+        return response()->json(['message' => 'この復習問題はすでに解答済みです。'], 409);
+    }
+
+    // 問題と選択肢の整合性をチェックする
+    $question = $reviewSetQuestion->question;
+    $questionChoiceId = $request->input('question_choice_id');
+    $choice = $question->choices()->where('id', $questionChoiceId)->first();
+
+    if (! $choice) {
+        return response()->json([
+            'message' => '入力内容に誤りがあります。',
+            'errors' => [
+                'question_choice_id' => ['指定された選択肢はこの問題に含まれていません。'],
+            ],
+        ], 422);
+    }
+
+    // 学習セッションを取得する
+    // question_attempts.learning_session_id に必要なため
+    $learningSession = LearningSession::where('user_id', $user->id)
+        ->where('learning_target_type', 'review')
+        ->where('learning_target_id', $reviewSet->id)
+        ->where('status', 'in_progress')
+        ->first();
+
+    if (! $learningSession) {
+        return response()->json(['message' => '学習セッションが見つかりません。'], 404);
+    }
+
+    $isCorrect = $choice->is_correct;
+    $now = now();
+
+    // 回答履歴を保存する
+    $questionAttempt = QuestionAttempt::create([
+        'user_id' => $user->id,
+        'learning_session_id' => $learningSession->id,
+        'question_id' => $question->id,
+        'question_choice_id' => $choice->id,
+        'attempt_type' => 'review',
+        'is_correct' => $isCorrect,
+        'answered_at' => $now,
+    ]);
+
+    // review_set_questions の結果を更新する
+    $result = $isCorrect ? 'correct' : 'incorrect';
+    $reviewSetQuestion->update([
+        'question_attempt_id' => $questionAttempt->id,
+        'result' => $result,
+        'answered_at' => $now,
+    ]);
+
+    // 正解の場合は review_question_states を resolved に更新する
+    // 不正解の場合は incorrect_count を増やす
+    $reviewQuestionState = ReviewQuestionState::where('user_id', $user->id)
+        ->where('question_id', $question->id)
+        ->first();
+
+    if ($reviewQuestionState) {
+        if ($isCorrect) {
+            $reviewQuestionState->update([
+                'status' => 'resolved',
+                'resolved_at' => $now,
+            ]);
+        } else {
+            $reviewQuestionState->update([
+                'incorrect_count' => $reviewQuestionState->incorrect_count + 1,
+            ]);
+        }
+    }
+
+    // review_sets のカウントを更新する
+    $reviewSetUpdateData = [];
+    if ($isCorrect) {
+        $reviewSetUpdateData['correct_count'] = $reviewSet->correct_count + 1;
+    } else {
+        $reviewSetUpdateData['incorrect_count'] = $reviewSet->incorrect_count + 1;
+    }
+
+    // 全問回答済みの場合は review_sets.status を completed に更新する
+    $answeredCount = $reviewSet->reviewSetQuestions()
+        ->where('result', '!=', 'not_answered')
+        ->count();
+
+    $justCompleted = false;
+    if ($reviewSet->status !== 'completed' && $answeredCount >= $reviewSet->target_question_count) {
+        $reviewSetUpdateData['status'] = 'completed';
+        $justCompleted = true;
+    }
+
+    $reviewSet->update($reviewSetUpdateData);
+
+    // 復習セットが最終問題だった場合は学習セッションを終了させる
+    // そうでなければ last_activity_at を更新する
+    if ($justCompleted) {
+        $startedAt = CarbonImmutable::parse($learningSession->started_at);
+        $durationSeconds = $startedAt->diffInSeconds($now);
+
+        // 復習は60分を上限とする
+        $maxDurationSeconds = 3600;
+        if ($durationSeconds > $maxDurationSeconds) {
+            $durationSeconds = $maxDurationSeconds;
+        }
+
+        $learningSession->update([
+            'status' => 'completed',
+            'ended_at' => $now,
+            'duration_seconds' => $durationSeconds,
+            'last_activity_at' => $now,
+        ]);
+    } else {
+        $learningSession->update(['last_activity_at' => $now]);
+    }
+
+    return response()->json([
+        'question_attempt_id' => $questionAttempt->id,
+        ], 201);
     }
 }
