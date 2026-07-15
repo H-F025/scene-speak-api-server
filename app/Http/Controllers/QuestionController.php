@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreQuestionAnswerRequest;
+use App\Models\LearningSession;
+use App\Models\Question;
+use App\Models\QuestionAttempt;
 use App\Models\QuestionProgress;
+use App\Models\ReviewQuestionState;
+use App\Models\ReviewSetQuestion;
 use App\Models\ThemeLearningProgress;
 use App\Models\ThemeLevel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Models\LearningSession;
-use App\Models\Question;
-use App\Http\Requests\StoreQuestionAnswerRequest;
-use App\Models\QuestionAttempt;
-use App\Models\ReviewQuestionState;
 
 class QuestionController extends Controller
 {
@@ -421,17 +422,32 @@ class QuestionController extends Controller
         $explanation = $question->correct_explanation;
     }
 
-    $nextQuestion = Question::where('theme_level_id', $question->theme_level_id)
-        ->where('sort_order', '>', $question->sort_order)
-        ->orderBy('sort_order', 'asc')
-        ->first();
+        // 復習回答の場合は次の復習問題IDを、通常回答の場合は次のテーマ問題IDを返す
+        if ($questionAttempt->attempt_type === 'review') {
+            $currentReviewSetQuestion = ReviewSetQuestion::where('question_attempt_id', $questionAttempt->id)->first();
+            $nextQuestionId = null;
+
+            if ($currentReviewSetQuestion) {
+                $nextReviewSetQuestion = ReviewSetQuestion::where('review_set_id', $currentReviewSetQuestion->review_set_id)
+                    ->where('order_no', '>', $currentReviewSetQuestion->order_no)
+                    ->orderBy('order_no', 'asc')
+                    ->first();
+                $nextQuestionId = $nextReviewSetQuestion?->id;
+            }
+        } else {
+            $nextQuestion = Question::where('theme_level_id', $question->theme_level_id)
+                ->where('sort_order', '>', $question->sort_order)
+                ->orderBy('sort_order', 'asc')
+                ->first();
+            $nextQuestionId = $nextQuestion?->id;
+        }
 
     $learningSession->update(['last_activity_at' => now()]);
 
     return response()->json([
         'question_attempt_id' => $questionAttempt->id,
         'learning_session_id' => $learningSession->id,
-        'next_question_id' => $nextQuestion?->id,
+        'next_question_id' => $nextQuestionId,
         'result' => [
             'is_correct' => (bool) $questionAttempt->is_correct,
             'selected_choice' => [

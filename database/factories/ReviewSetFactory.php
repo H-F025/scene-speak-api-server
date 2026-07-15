@@ -18,7 +18,7 @@ class ReviewSetFactory extends Factory
     public function definition(): array
     {
     return [
-        'status' => 'created',
+        'status' => 'in_progress',
         'target_from_at' => now()->subDays(6)->startOfDay(),
         'target_to_at' => now(),
         'target_question_count' => 1,
