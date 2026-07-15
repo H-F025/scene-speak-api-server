@@ -157,7 +157,7 @@ class ReviewSetController extends Controller
     // 復習セットを作成する
     $reviewSet = ReviewSet::create([
         'user_id' => $user->id,
-        'status' => 'created',
+        'status' => 'in_progress',
         'target_from_at' => $from,
         'target_to_at' => $to,
         'target_question_count' => $questionCount,

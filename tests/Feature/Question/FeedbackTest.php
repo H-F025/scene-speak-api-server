@@ -7,6 +7,8 @@ use App\Models\LearningSession;
 use App\Models\Question;
 use App\Models\QuestionAttempt;
 use App\Models\QuestionChoice;
+use App\Models\ReviewSet;
+use App\Models\ReviewSetQuestion;
 use App\Models\Theme;
 use App\Models\ThemeLevel;
 use App\Models\User;
@@ -142,5 +144,64 @@ class FeedbackTest extends TestCase
             ->getJson("/api/v1/question-attempts/{$this->questionAttempt->id}");
         $response->assertStatus(404)
             ->assertJson(['message' => '回答結果が見つかりません。']);
+    }
+
+    public function test_returns_next_review_set_question_id_when_next_review_question_exists(): void
+    {
+        $reviewSet = ReviewSet::factory()->create(['user_id' => $this->user->id]);
+
+        $reviewAttempt = QuestionAttempt::factory()->create([
+            'user_id' => $this->user->id,
+            'learning_session_id' => $this->learningSession->id,
+            'question_id' => $this->question->id,
+            'question_choice_id' => $this->incorrectChoice->id,
+            'attempt_type' => 'review',
+            'is_correct' => false,
+        ]);
+
+        $currentReviewSetQuestion = ReviewSetQuestion::factory()->create([
+            'review_set_id' => $reviewSet->id,
+            'question_id' => $this->question->id,
+            'question_attempt_id' => $reviewAttempt->id,
+            'order_no' => 1,
+        ]);
+
+        $nextQuestion = Question::factory()->create(['theme_level_id' => $this->themeLevel->id]);
+        $nextReviewSetQuestion = ReviewSetQuestion::factory()->create([
+            'review_set_id' => $reviewSet->id,
+            'question_id' => $nextQuestion->id,
+            'order_no' => 2,
+        ]);
+
+         $response = $this->getfeedback($reviewAttempt->id);
+
+        $response->assertStatus(200)
+            ->assertJson(['next_question_id' => $nextReviewSetQuestion->id]);
+    }
+
+    public function test_returns_null_for_next_question_id_when_no_next_review_question(): void
+    {
+        $reviewSet = ReviewSet::factory()->create(['user_id' => $this->user->id]);
+
+        $reviewAttempt = QuestionAttempt::factory()->create([
+            'user_id' => $this->user->id,
+            'learning_session_id' => $this->learningSession->id,
+            'question_id' => $this->question->id,
+            'question_choice_id' => $this->incorrectChoice->id,
+            'attempt_type' => 'review',
+            'is_correct' => false,
+        ]);
+
+        ReviewSetQuestion::factory()->create([
+            'review_set_id' => $reviewSet->id,
+            'question_id' => $this->question->id,
+            'question_attempt_id' => $reviewAttempt->id,
+            'order_no' => 1,
+        ]);
+
+        $response = $this->getfeedback($reviewAttempt->id);
+
+        $response->assertStatus(200)
+            ->assertJson(['next_question_id' => null]);
     }
 }

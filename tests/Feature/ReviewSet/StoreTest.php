@@ -72,7 +72,7 @@ class StoreTest extends TestCase
         $this->assertDatabaseHas('review_sets', [
             'id' => $reviewSetId,
             'user_id' => $this->user->id,
-            'status' => 'created',
+            'status' => 'in_progress',
             'target_question_count' => 1,
             'priority' => 'low',
             'estimated_seconds' => 45,
