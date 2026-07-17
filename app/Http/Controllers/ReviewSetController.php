@@ -410,4 +410,113 @@ class ReviewSetController extends Controller
         'question_attempt_id' => $questionAttempt->id,
         ], 201);
     }
+
+    public function completion(int $reviewSetId): JsonResponse
+    {
+    $user = Auth::user();
+
+    $reviewSet = ReviewSet::where('id', $reviewSetId)
+        ->where('user_id', $user->id)
+        ->first();
+
+    if (! $reviewSet) {
+        return response()->json([
+            'message' => '復習セットが見つかりません。',
+        ], 404);
+    }
+
+    if ($reviewSet->status !== 'completed') {
+        return response()->json([
+            'message' => '復習セットがまだ完了していません。',
+        ], 409);
+    }
+
+    $totalQuestionCount = $reviewSet->target_question_count;
+    $correctCount = $reviewSet->correct_count;
+    $skippedCount = $reviewSet->skipped_count;
+
+    $reviewSetQuestions = $reviewSet->reviewSetQuestions()
+        ->whereIn('result', ['correct', 'incorrect'])
+        ->with('question.categories')
+        ->get();
+
+    $categoryCounts = [];
+
+    foreach ($reviewSetQuestions as $reviewSetQuestion) {
+        $question = $reviewSetQuestion->question;
+
+        if (! $question) {
+            continue;
+        }
+
+        foreach ($question->categories as $category) {
+            if (! isset($categoryCounts[$category->id])) {
+                $categoryCounts[$category->id] = [
+                    'name' => $category->name,
+                    'question_count' => 0,
+                    'sort_order' => $category->sort_order,
+                ];
+            }
+
+            $categoryCounts[$category->id]['question_count']++;
+        }
+    }
+
+    usort($categoryCounts, function ($a, $b) {
+        if ($a['question_count'] > $b['question_count']) {
+            return -1;
+        }
+
+        if ($a['question_count'] < $b['question_count']) {
+            return 1;
+        }
+
+        if ($a['sort_order'] < $b['sort_order']) {
+            return -1;
+        }
+
+        if ($a['sort_order'] > $b['sort_order']) {
+            return 1;
+        }
+
+        return 0;
+    });
+
+    $reviewedCategoryCount = count($categoryCounts);
+
+    $reviewedCategories = [];
+
+    foreach ($categoryCounts as $categoryCount) {
+        if (count($reviewedCategories) >= 2) {
+            break;
+        }
+
+        $reviewedCategories[] = $categoryCount['name'];
+    }
+
+    $from = CarbonImmutable::now()->subDays(6)->startOfDay();
+
+    $hasRemainingReviewQuestions = ReviewQuestionState::where('user_id', $user->id)
+        ->where('status', 'needs_review')
+        ->where('updated_at', '>=', $from)
+        ->exists();
+
+    if ($skippedCount >= 1) {
+        $nextRecommendationType = 'review_skipped';
+    } elseif ($hasRemainingReviewQuestions) {
+        $nextRecommendationType = 'review_remaining';
+    } else {
+        $nextRecommendationType = 'review_completed';
+    }
+
+    return response()->json([
+        'result' => [
+            'total_question_count' => $totalQuestionCount,
+            'correct_count' => $correctCount,
+        ],
+        'reviewed_categories' => $reviewedCategories,
+        'reviewed_category_count' => $reviewedCategoryCount,
+        'next_recommendation_type' => $nextRecommendationType,
+        ]);
+    }
 }
