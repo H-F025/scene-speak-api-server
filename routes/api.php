@@ -1,6 +1,7 @@
 <?php
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnglishLevelController;
+use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ThemeController;
@@ -21,6 +22,8 @@ Route::prefix('v1')->group(function () {
         });
 
         Route::get('home', [HomeController::class, 'show']);
+
+        Route::get('histories', [HistoryController::class, 'index']);
 
     Route::get('english-levels', [EnglishLevelController::class, 'index']);
         Route::patch('me/english-level', [EnglishLevelController::class, 'update']);
