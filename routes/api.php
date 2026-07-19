@@ -1,6 +1,7 @@
 <?php
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EnglishLevelController;
+use App\Http\Controllers\HomeController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\QuestionController;
@@ -19,10 +20,12 @@ Route::prefix('v1')->group(function () {
             Route::post('logout', [AuthController::class, 'logout']);
         });
 
-    Route::get('english-levels', [EnglishLevelController::class, 'index']);
-        Route::patch('me/english-level', [EnglishLevelController::class, 'update']); // 追加
+        Route::get('home', [HomeController::class, 'show']);
 
-        Route::get('themes', [ThemeController::class, 'index']); // ← 追加
+    Route::get('english-levels', [EnglishLevelController::class, 'index']);
+        Route::patch('me/english-level', [EnglishLevelController::class, 'update']);
+
+        Route::get('themes', [ThemeController::class, 'index']);
 
         Route::get('themes/{theme_level_id}/questions', [QuestionController::class, 'index']);
 
