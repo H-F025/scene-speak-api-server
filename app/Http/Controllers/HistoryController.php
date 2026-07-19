@@ -17,6 +17,7 @@ class HistoryController extends Controller
     public function index(IndexHistoryRequest $request): JsonResponse
     {
         $user = Auth::user();
+
         // 学習済みとして扱うセッション状態を用意する
         // in_progress はまだ学習中なので、履歴や集計には含めない
         $finishedStatuses = [
@@ -24,9 +25,17 @@ class HistoryController extends Controller
             'interrupted',
             'abandoned',
         ];
+
+         // year_month が指定されていない場合は当月を対象にする
+        $yearMonthInput = $request->input('year_month', CarbonImmutable::now()->format('Y-m'));
+        $targetMonth = CarbonImmutable::createFromFormat('Y-m', $yearMonthInput);
+        $startOfMonth = $targetMonth->startOfMonth();
+        $endOfMonth = $targetMonth->endOfMonth();
+
         // 連続学習日数を計算する
         // 学習履歴画面の上部に表示するため
         $streakDays = $this->calculateStreakDays($user->id, $finishedStatuses);
+
         // 通常学習で回答した回数を取得する
         // DB設計どおりなら attempt_type = 1 が通常学習
         //
@@ -35,6 +44,7 @@ class HistoryController extends Controller
         $conversationCount = QuestionAttempt::where('user_id', $user->id)
             ->where('attempt_type', 'theme')
             ->count();
+
         // 総学習時間を秒数で取得する
         // duration_seconds が 0 のセッションは、総学習時間には足さない
         //
@@ -45,12 +55,16 @@ class HistoryController extends Controller
             ->where('duration_seconds', '>', 0)
             ->sum('duration_seconds');
         $totalStudySeconds = (int) $totalStudySeconds;
+
         // 通常学習の履歴カードを作る
-        $normalCards = $this->buildNormalCards($user->id, $finishedStatuses);
+        $normalCards = $this->buildNormalCards($user->id, $finishedStatuses, $startOfMonth, $endOfMonth);
+
         // 復習の履歴カードを作る
-        $reviewCards = $this->buildReviewCards($user->id, $finishedStatuses);
+        $reviewCards = $this->buildReviewCards($user->id, $finishedStatuses, $startOfMonth, $endOfMonth);
+
         // 通常学習と復習の履歴カードを1つにまとめる
         $allCards = $normalCards->merge($reviewCards);
+
         // 履歴カードを新しい順に並び替える
         // sort_at が大きいものほど新しい履歴なので、上に表示する
         $allCards = $allCards->sort(function ($a, $b) {
@@ -62,14 +76,17 @@ class HistoryController extends Controller
             }
             return 0;
         })->values();
+
         // 1ページあたりの表示件数
         $perPage = 20;
+
         // リクエストの page を取得する
         // page が指定されていない場合は 1ページ目にする
         $page = (int) $request->input('page', 1);
         if ($page < 1) {
             $page = 1;
         }
+
         // Collection を手動でページネーションする
         // 通常学習と復習を合体してから並び替えているため、DBの paginate は使いにくい
         $paginator = new LengthAwarePaginator(
@@ -82,6 +99,7 @@ class HistoryController extends Controller
                 'query' => $request->query(),
             ]
         );
+
         // 月ごとに履歴をまとめるための配列
         $groups = [];
         foreach ($paginator->items() as $card) {
@@ -94,6 +112,7 @@ class HistoryController extends Controller
                     'histories' => [],
                 ];
             }
+
             // フロントに返す履歴データを追加する
             // sort_at など、画面に不要な内部用データは返さない
             $groups[$groupKey]['histories'][] = [
@@ -138,6 +157,7 @@ class HistoryController extends Controller
             })
             ->orderBy('ended_at', 'desc')
             ->get(['id', 'ended_at']);
+
         // 学習した日付を入れる配列
         // 同じ日に複数回学習しても、日付は1回だけ入れる
         $studiedDates = [];
@@ -151,6 +171,7 @@ class HistoryController extends Controller
         // 今日まだ学習していなくても、昨日まで続いていれば連続日数として表示するため
         $today = CarbonImmutable::today();
         $yesterday = $today->subDay();
+
         // どの日付から連続日数を数え始めるかを入れる変数
         $checkDate = null;
         if (in_array($today->toDateString(), $studiedDates, true)) {
@@ -167,8 +188,10 @@ class HistoryController extends Controller
         foreach ($studiedDates as $date) {
             // 確認したい日付と、実際に学習した日付が一致するか確認する
             if ($date === $checkDate->toDateString()) {
+
                 // 一致したら連続日数を1日増やす
                 $streakDays++;
+
                 // 次は1日前の日付を確認する
                 // CarbonImmutable は自分自身を変更しないので、代入が必要
                 $checkDate = $checkDate->subDay();
@@ -179,7 +202,7 @@ class HistoryController extends Controller
         }
         return $streakDays;
     }
-    private function buildNormalCards(int $userId, array $finishedStatuses): Collection
+    private function buildNormalCards(int $userId, array $finishedStatuses, CarbonImmutable $startOfMonth, CarbonImmutable $endOfMonth): Collection
     {
         // 通常学習の終了済みセッションを取得する
         // questionAttempts も一緒に取得して、回答数や正解数を集計する
@@ -187,19 +210,23 @@ class HistoryController extends Controller
             ->where('learning_target_type', 'normal')
             ->whereIn('status', $finishedStatuses)
             ->whereNotNull('ended_at')
+            ->whereBetween('ended_at', [$startOfMonth, $endOfMonth])
             ->with('questionAttempts')
             ->get();
+
         // 同じ日・同じテーマレベルの履歴をまとめるための配列
         $groups = [];
         foreach ($sessions as $session) {
             $attempts = $session->questionAttempts;
             $attemptCount = $attempts->count();
+
             // 履歴に表示するかどうかを判定する
             // duration_seconds が 0 でも、回答済みなら履歴に表示する
             // これにより、10秒未満でも回答済みなら履歴に出せる
             if (! $this->shouldShowHistory((int) $session->duration_seconds, $attemptCount)) {
                 continue;
             }
+
             // 学習時間はDBに保存されている duration_seconds をそのまま使う
             // 10秒未満でも回答済みなら、終了API側で実際の秒数が保存されている想定
             $durationSeconds = (int) $session->duration_seconds;
@@ -208,6 +235,7 @@ class HistoryController extends Controller
             }
             $endedAt = CarbonImmutable::parse($session->ended_at);
             $date = $endedAt->toDateString();
+
             // learning_target_id がない場合はテーマが特定できないため、履歴カードを作れない
             if ($session->learning_target_id === null) {
                 continue;
@@ -227,8 +255,10 @@ class HistoryController extends Controller
             }
             // 同じ日・同じテーマレベルの学習時間を合計する
             $groups[$key]['total_duration'] += $durationSeconds;
+
             // 回答数を合計する
             $groups[$key]['attempt_count'] += $attemptCount;
+
             // 正解数を合計する
             foreach ($attempts as $attempt) {
                 if ($attempt->is_correct) {
@@ -255,6 +285,7 @@ class HistoryController extends Controller
         $themeLevelModels = ThemeLevel::whereIn('id', $themeLevelIds)
             ->with('theme')
             ->get();
+
         // theme_level_id で探しやすくするための配列を作る
         $themeLevels = [];
         foreach ($themeLevelModels as $themeLevel) {
@@ -263,6 +294,7 @@ class HistoryController extends Controller
         $cards = [];
         foreach ($groups as $group) {
             $themeLevelId = $group['learning_target_id'];
+
             // テーマレベルが見つからない場合は、履歴カードを作れないためスキップする
             if (! isset($themeLevels[$themeLevelId])) {
                 continue;
@@ -286,7 +318,7 @@ class HistoryController extends Controller
         }
         return collect($cards);
     }
-    private function buildReviewCards(int $userId, array $finishedStatuses): Collection
+    private function buildReviewCards(int $userId, array $finishedStatuses, CarbonImmutable $startOfMonth, CarbonImmutable $endOfMonth): Collection
     {
         // 復習の終了済みセッションを取得する
         // ended_at がないと履歴の日付を作れないため除外する
@@ -294,6 +326,7 @@ class HistoryController extends Controller
             ->where('learning_target_type', 'review')
             ->whereIn('status', $finishedStatuses)
             ->whereNotNull('ended_at')
+            ->whereBetween('ended_at', [$startOfMonth, $endOfMonth])
             ->get();
         if ($sessions->isEmpty()) {
             return collect();
@@ -314,6 +347,7 @@ class HistoryController extends Controller
         }
         $reviewSetModels = ReviewSet::whereIn('id', $reviewSetIds)
             ->get();
+
         // review_set_id で探しやすくするための配列を作る
         $reviewSets = [];
         foreach ($reviewSetModels as $reviewSet) {
@@ -322,16 +356,19 @@ class HistoryController extends Controller
         $cards = [];
         foreach ($sessions as $session) {
             $reviewSetId = $session->learning_target_id;
+
             // 復習セットが見つからない場合は、summary を作れないためスキップする
             if (! isset($reviewSets[$reviewSetId])) {
                 continue;
             }
             $reviewSet = $reviewSets[$reviewSetId];
+
             // 復習で回答・不正解・スキップした合計数を出す
             // これが1以上なら、10秒未満でも履歴に表示する
             $answeredCount = $reviewSet->correct_count
                 + $reviewSet->incorrect_count
                 + $reviewSet->skipped_count;
+
             // duration_seconds が 0 でも、回答済みなら履歴に表示する
             if (! $this->shouldShowHistory((int) $session->duration_seconds, $answeredCount)) {
                 continue;

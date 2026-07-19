@@ -67,8 +67,10 @@ class IndexTest extends TestCase
             'attempt_type' => 'theme',
             'is_correct' => false,
         ]);
+
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/histories');
+            ->getJson('/api/v1/histories?year_month=2026-05');
+
         $response->assertStatus(200)
             ->assertJson([
                 'history_groups' => [
@@ -104,9 +106,11 @@ class IndexTest extends TestCase
             'duration_seconds' => 360,
             'ended_at' => now()->setDate(2026, 5, 8)->setTime(14, 0, 0),
         ]);
+
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/histories');
-        $response->assertStatus(200)
+            ->getJson('/api/v1/histories?year_month=2026-05');
+
+            $response->assertStatus(200)
             ->assertJson([
                 'history_groups' => [
                     [
@@ -141,8 +145,10 @@ class IndexTest extends TestCase
             'duration_seconds' => 360,
             'ended_at' => now()->setDate(2026, 5, 8)->setTime(14, 0, 0),
         ]);
+
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/histories');
+            ->getJson('/api/v1/histories?year_month=2026-05');
+
         $response->assertStatus(200)
             ->assertJson([
                 'history_groups' => [
@@ -190,9 +196,11 @@ class IndexTest extends TestCase
             'attempt_type' => 'theme',
             'is_correct' => false,
         ]);
+
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/histories');
-        $response->assertStatus(200);
+           ->getJson('/api/v1/histories?year_month=2026-05');
+       
+            $response->assertStatus(200);
         $histories = $response->json('history_groups.0.histories');
         $this->assertCount(1, $histories);
         $this->assertEquals('2問学習・1問正解', $histories[0]['summary']);
@@ -208,8 +216,10 @@ class IndexTest extends TestCase
             'duration_seconds' => 5,
             'ended_at' => now()->setDate(2026, 5, 10)->setTime(10, 0, 0),
         ]);
+
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/histories');
+            ->getJson('/api/v1/histories?year_month=2026-05');
+
         $response->assertStatus(200)
             ->assertJson(['history_groups' => []]);
     }
@@ -231,16 +241,18 @@ class IndexTest extends TestCase
             'attempt_type' => 'theme',
             'is_correct' => true,
         ]);
+
         $response = $this->actingAs($this->user)
-            ->getJson('/api/v1/histories');
+            ->getJson('/api/v1/histories?year_month=2026-05');
+
         $response->assertStatus(200);
         $histories = $response->json('history_groups.0.histories');
         $this->assertCount(1, $histories);
         $this->assertEquals('1分未満', $histories[0]['study_time']);
     }
-    public function test_returns_sessions_from_multiple_months_in_same_response(): void
+    public function test_filters_history_by_specified_year_month(): void
     {
-        $sessionMay = LearningSession::factory()->create([
+        $sessionCurrentMonth = LearningSession::factory()->create([
             'user_id' => $this->user->id,
             'learning_target_type' => 'normal',
             'learning_target_id' => $this->themeLevel->id,
@@ -248,37 +260,70 @@ class IndexTest extends TestCase
             'duration_seconds' => 600,
             'ended_at' => now()->setDate(2026, 5, 10)->setTime(10, 0, 0),
         ]);
+
         QuestionAttempt::factory()->create([
             'user_id' => $this->user->id,
-            'learning_session_id' => $sessionMay->id,
+            'learning_session_id' => $sessionCurrentMonth->id,
             'question_id' => $this->question->id,
             'question_choice_id' => $this->questionChoice->id,
             'attempt_type' => 'theme',
             'is_correct' => true,
         ]);
-        $sessionApr = LearningSession::factory()->create([
+
+        LearningSession::factory()->create([
             'user_id' => $this->user->id,
             'learning_target_type' => 'normal',
             'learning_target_id' => $this->themeLevel->id,
             'status' => 'completed',
             'duration_seconds' => 600,
-            'ended_at' => now()->setDate(2026, 4, 28)->setTime(10, 0, 0),
+            'ended_at' => now()->subMonth(),
         ]);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/v1/histories?year_month=2026-05');
+
+        $response->assertStatus(200);
+
+        $groups = $response->json('history_groups');
+        $this->assertCount(1, $groups);
+        $this->assertEquals('2026年5月', $groups[0]['year_month']);
+    }
+
+    public function test_defaults_to_current_month_when_year_month_not_specified(): void
+    {
+        $sessionCurrentMonth = LearningSession::factory()->create([
+            'user_id' => $this->user->id,
+            'learning_target_type' => 'normal',
+            'learning_target_id' => $this->themeLevel->id,
+            'status' => 'completed',
+            'duration_seconds' => 600,
+            'ended_at' => now(),
+        ]);
+
         QuestionAttempt::factory()->create([
             'user_id' => $this->user->id,
-            'learning_session_id' => $sessionApr->id,
+            'learning_session_id' => $sessionCurrentMonth->id,
             'question_id' => $this->question->id,
             'question_choice_id' => $this->questionChoice->id,
             'attempt_type' => 'theme',
             'is_correct' => true,
         ]);
+
+        LearningSession::factory()->create([
+            'user_id' => $this->user->id,
+            'learning_target_type' => 'normal',
+            'learning_target_id' => $this->themeLevel->id,
+            'status' => 'completed',
+            'duration_seconds' => 600,
+            'ended_at' => now()->subMonth(),
+        ]);
+
         $response = $this->actingAs($this->user)
             ->getJson('/api/v1/histories');
+
         $response->assertStatus(200);
         $groups = $response->json('history_groups');
-        $this->assertCount(2, $groups);
-        $this->assertEquals('2026年5月', $groups[0]['year_month']);
-        $this->assertEquals('2026年4月', $groups[1]['year_month']);
+        $this->assertCount(1, $groups);
     }
     public function test_returns_study_summary(): void
     {
@@ -298,8 +343,10 @@ class IndexTest extends TestCase
             'attempt_type' => 'theme',
             'is_correct' => true,
         ]);
+
         $response = $this->actingAs($this->user)
             ->getJson('/api/v1/histories');
+
         $response->assertStatus(200)
             ->assertJsonStructure([
                 'study_summary' => [
@@ -342,8 +389,10 @@ class IndexTest extends TestCase
             'attempt_type' => 'review',
             'is_correct' => true,
         ]);
+
         $response = $this->actingAs($this->user)
             ->getJson('/api/v1/histories');
+
         $response->assertStatus(200)
             ->assertJson([
                 'study_summary' => [
