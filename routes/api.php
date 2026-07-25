@@ -43,9 +43,8 @@ Route::prefix('v1')->group(function () {
         Route::get('review-sets/{review_set_id}/questions/{review_set_question_id}', [ReviewSetController::class, 'showQuestion']);
         Route::post('review-sets/{review_set_id}/questions/{review_set_question_id}/answer', [ReviewSetController::class, 'answerQuestion']);
         Route::get('review-sets/{review_set_id}/completion', [ReviewSetController::class, 'completion']);
-
+        });
         Route::get('health', function () {
         return response()->json(['message' => 'OK']);
-    });
     });
 });
