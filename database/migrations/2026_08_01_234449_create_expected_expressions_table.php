@@ -6,14 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('expected_expressions', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
+    Schema::create('expected_expressions', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('question_id')->constrained()->cascadeOnDelete();
+        $table->string('text');
+        $table->boolean('is_primary')->default(false);
+        $table->timestamps();
         });
     }
 
