@@ -8,6 +8,7 @@ use App\Http\Controllers\ThemeController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\LearningSessionController;
 use App\Http\Controllers\ReviewSetController;
+use App\Http\Controllers\ContactController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -47,4 +48,6 @@ Route::prefix('v1')->group(function () {
         Route::get('health', function () {
         return response()->json(['message' => 'OK']);
     });
+        Route::post('/contacts', [ContactController::class, 'store'])
+        ->middleware('throttle:5,60');
 });
