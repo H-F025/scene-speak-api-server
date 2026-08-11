@@ -3669,3 +3669,16 @@ Did you mean one of these?
 #20 /app/artisan(16): Illuminate\\Foundation\\Application->handleCommand(Object(Symfony\\Component\\Console\\Input\\ArgvInput))
 #21 {main}
 "} 
+[2026-08-11 10:37:04] testing.ERROR: 送信失敗 {"exception":"[object] (RuntimeException(code: 0): 送信失敗 at /app/tests/Feature/Contact/StoreTest.php:133)
+[stacktrace]
+#0 /app/vendor/phpunit/phpunit/src/Framework/TestCase.php(1318): Tests\\Feature\\Contact\\StoreTest->test_メール送信に失敗しても受付は成功する()
+#1 /app/vendor/phpunit/phpunit/src/Framework/TestCase.php(1355): PHPUnit\\Framework\\TestCase->invokeTestMethod('test_\\xE3\\x83\\xA1\\xE3\\x83\\xBC\\xE3\\x83\\xAB\\xE9...', Array)
+#2 /app/vendor/phpunit/phpunit/src/Framework/TestCase.php(521): PHPUnit\\Framework\\TestCase->runTest()
+#3 /app/vendor/phpunit/phpunit/src/Framework/TestRunner/TestRunner.php(99): PHPUnit\\Framework\\TestCase->runBare()
+#4 /app/vendor/phpunit/phpunit/src/Framework/TestCase.php(361): PHPUnit\\Framework\\TestRunner->run(Object(Tests\\Feature\\Contact\\StoreTest))
+#5 /app/vendor/phpunit/phpunit/src/Framework/TestSuite.php(374): PHPUnit\\Framework\\TestCase->run()
+#6 /app/vendor/phpunit/phpunit/src/TextUI/TestRunner.php(64): PHPUnit\\Framework\\TestSuite->run()
+#7 /app/vendor/phpunit/phpunit/src/TextUI/Application.php(229): PHPUnit\\TextUI\\TestRunner->run(Object(PHPUnit\\TextUI\\Configuration\\Configuration), Object(PHPUnit\\Runner\\ResultCache\\DefaultResultCache), Object(PHPUnit\\Framework\\TestSuite))
+#8 /app/vendor/phpunit/phpunit/phpunit(104): PHPUnit\\TextUI\\Application->run(Array)
+#9 {main}
+"} 
