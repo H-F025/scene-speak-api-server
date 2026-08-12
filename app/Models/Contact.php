@@ -11,11 +11,10 @@ class Contact extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'name',
-        'email',
-        'subject',
-        'body',
+    'user_id',
+    'name',
+    'email',
+    'message',
     ];
 
     public function user(): BelongsTo

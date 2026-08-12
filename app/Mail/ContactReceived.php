@@ -19,9 +19,9 @@ class ContactReceived extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: '【SceneSpeak】お問い合わせを受信しました：' . $this->contact->subject,
-            replyTo: [$this->contact->email],
+    return new Envelope(
+        subject: '【SceneSpeak】お問い合わせを受信しました',
+        replyTo: [$this->contact->email],
         );
     }
 

@@ -13,21 +13,19 @@ class StoreContactRequest extends FormRequest
 
     public function rules(): array
     {
-        return [
-            'name'    => ['required', 'string', 'max:50'],
-            'email'   => ['required', 'string', 'email:rfc', 'max:255'],
-            'subject' => ['required', 'string', 'max:100'],
-            'body'    => ['required', 'string', 'max:2000'],
+    return [
+        'name'    => ['required', 'string', 'max:50'],
+        'email'   => ['required', 'string', 'email:rfc', 'max:254'],
+        'message' => ['required', 'string', 'max:2000'],
         ];
     }
 
     public function attributes(): array
     {
-        return [
-            'name'    => 'お名前',
-            'email'   => 'メールアドレス',
-            'subject' => '件名',
-            'body'    => 'お問い合わせ内容',
+    return [
+        'name'    => 'お名前',
+        'email'   => 'メールアドレス',
+        'message' => 'お問い合わせ内容',
         ];
     }
 }
