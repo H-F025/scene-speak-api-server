@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call(ThemeSeeder::class);
         $this->call(QuestionSeeder::class);
         $this->call(QuestionCategorySeeder::class);
+        $this->call(GuestUserSeeder::class);
 
     User::factory()->create(['english_level_id' => EnglishLevel::first()->id]);
     }

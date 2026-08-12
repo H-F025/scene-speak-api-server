@@ -26,7 +26,7 @@ Route::prefix('v1')->group(function () {
 
         Route::get('histories', [HistoryController::class, 'index']);
 
-    Route::get('english-levels', [EnglishLevelController::class, 'index']);
+        Route::get('english-levels', [EnglishLevelController::class, 'index']);
         Route::patch('me/english-level', [EnglishLevelController::class, 'update']);
 
         Route::get('themes', [ThemeController::class, 'index']);
@@ -44,10 +44,10 @@ Route::prefix('v1')->group(function () {
         Route::get('review-sets/{review_set_id}/questions/{review_set_question_id}', [ReviewSetController::class, 'showQuestion']);
         Route::post('review-sets/{review_set_id}/questions/{review_set_question_id}/answer', [ReviewSetController::class, 'answerQuestion']);
         Route::get('review-sets/{review_set_id}/completion', [ReviewSetController::class, 'completion']);
+        Route::post('/contacts', [ContactController::class, 'store'])
+        ->middleware('throttle:5,60');
         });
         Route::get('health', function () {
         return response()->json(['message' => 'OK']);
     });
-        Route::post('/contacts', [ContactController::class, 'store'])
-        ->middleware('throttle:5,60');
 });

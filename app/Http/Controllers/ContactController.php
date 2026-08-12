@@ -13,8 +13,8 @@ class ContactController extends Controller
     public function store(StoreContactRequest $request): JsonResponse
     {
         $contact = Contact::create([
-            ...$request->validated(),
-            'user_id' => $request->user()?->id,
+        ...$request->validated(),
+        'user_id' => $request->user()->id,
         ]);
 
     try {

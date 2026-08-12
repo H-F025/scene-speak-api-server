@@ -8,16 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('contacts', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->string('name', 50);
-            $table->string('email');
-            $table->string('subject', 100);
-            $table->text('body');
-            $table->timestamps();
+    Schema::create('contacts', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+        $table->string('name', 50);
+        $table->string('email', 254);
+        $table->text('message');
+        $table->timestamps();
 
-            $table->index('created_at');
+        $table->index('created_at');
         });
     }
 
