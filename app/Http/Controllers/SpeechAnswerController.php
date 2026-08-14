@@ -21,6 +21,14 @@ class SpeechAnswerController extends Controller
         Question $question,
     ): JsonResponse {
         $question->load('expectedExpressions');
+        $question->load('expectedExpressions');
+
+        // 想定表現が未登録の問題は判定できない。スコア0を返すとユーザーの誤答と区別がつかないため明示的にエラーとする
+        abort_if(
+            $question->expectedExpressions->isEmpty(),
+            422,
+            'この問題には音声回答が設定されていません。',
+        );
 
         $result = $this->evaluator->evaluate($question, $request->validated('transcript'));
 

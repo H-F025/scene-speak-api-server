@@ -22,6 +22,16 @@ class Question extends Model
         return $this->hasMany(QuestionChoice::class);
     }
 
+    public function expectedExpressions(): HasMany
+    {
+        return $this->hasMany(ExpectedExpression::class);
+    }
+
+    public function speechAttempts(): HasMany
+    {
+        return $this->hasMany(SpeechAttempt::class);
+    }
+
     public function categories(): BelongsToMany
     {
     return $this->belongsToMany(QuestionCategory::class, 'question_category_assignments');
