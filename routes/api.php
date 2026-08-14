@@ -9,6 +9,7 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\LearningSessionController;
 use App\Http\Controllers\ReviewSetController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\SpeechAnswerController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
@@ -46,6 +47,7 @@ Route::prefix('v1')->group(function () {
         Route::get('review-sets/{review_set_id}/completion', [ReviewSetController::class, 'completion']);
         Route::post('/contacts', [ContactController::class, 'store'])
         ->middleware('throttle:5,60');
+        Route::post('/questions/{question}/speech-answers', [SpeechAnswerController::class, 'store']);
         });
         Route::get('health', function () {
         return response()->json(['message' => 'OK']);

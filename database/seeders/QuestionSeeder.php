@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\EnglishLevel;
+use App\Models\ExpectedExpression;
 use App\Models\Question;
 use App\Models\QuestionChoice;
 use App\Models\Theme;
@@ -45,6 +46,9 @@ class QuestionSeeder extends Seeder
                     );
                      // 問題に紐づく選択肢を登録する
                     $this->saveQuestionChoices($question, $questionData);
+
+                    // 音声回答の判定に使う想定表現を登録する
+                    $this->saveExpectedExpressions($question, $questionData);
                 }
             }
         }
@@ -409,5 +413,22 @@ class QuestionSeeder extends Seeder
         }
 
         return $choices;
+    }
+
+    // 音声回答の判定に使う想定表現を登録する。
+    // 正解の選択肢を模範解答 (is_primary) として登録し、言い換え表現は必要に応じて追加する
+    private function saveExpectedExpressions(Question $question, array $questionData): void
+    {
+        ExpectedExpression::updateOrCreate(
+            ['question_id' => $question->id, 'text' => $questionData['correct_choice']],
+            ['is_primary' => true]
+        );
+
+        foreach ($questionData['alternative_expressions'] ?? [] as $text) {
+            ExpectedExpression::updateOrCreate(
+                ['question_id' => $question->id, 'text' => $text],
+                ['is_primary' => false]
+            );
+        }
     }
 }
