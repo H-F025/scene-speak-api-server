@@ -50,6 +50,11 @@ class ThemeSeeder extends Seeder
                 'description' => '自由な会話で表現力をアップ！',
                 'sort_order' => 6,
             ],
+            [
+                'name' => '道を尋ねる',
+                'description' => '行きたい場所への行き方を英語で尋ねよう',
+                'sort_order' => 7,
+            ],
         ];
         foreach ($themes as $theme) {
             Theme::updateOrCreate(
@@ -106,6 +111,12 @@ class ThemeSeeder extends Seeder
                 'estimated_minutes' => null,
                 'sort_order' => 6,
             ],
+            [
+                'theme_name' => '道を尋ねる',
+                'english_level_code' => 'beginner',
+                'estimated_minutes' => 10,
+                'sort_order' => 7,
+            ],
             // 中級
             [
                 'theme_name' => 'カフェで注文',
@@ -143,6 +154,12 @@ class ThemeSeeder extends Seeder
                 'estimated_minutes' => null,
                 'sort_order' => 6,
             ],
+            [
+                'theme_name' => '道を尋ねる',
+                'english_level_code' => 'intermediate',
+                'estimated_minutes' => 15,
+                'sort_order' => 7,
+            ],
             // 上級
             [
                 'theme_name' => 'カフェで注文',
@@ -179,6 +196,12 @@ class ThemeSeeder extends Seeder
                 'english_level_code' => 'advanced',
                 'estimated_minutes' => null,
                 'sort_order' => 6,
+            ],
+            [
+                'theme_name' => '道を尋ねる',
+                'english_level_code' => 'advanced',
+                'estimated_minutes' => 18,
+                'sort_order' => 7,
             ],
         ];
         foreach ($themeLevels as $themeLevel) {
