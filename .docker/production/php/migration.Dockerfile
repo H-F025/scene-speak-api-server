@@ -21,4 +21,4 @@ WORKDIR /app
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
 RUN composer dump-autoload --optimize --no-dev --no-scripts
-CMD ["php", "artisan", "migrate", "--force"]
+CMD ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=MasterDataSeeder --force"]

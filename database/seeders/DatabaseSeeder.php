@@ -13,12 +13,8 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
-        $this->call(EnglishLevelSeeder::class);
-        $this->call(ThemeSeeder::class);
-        $this->call(QuestionSeeder::class);
-        $this->call(QuestionCategorySeeder::class);
-        $this->call(GuestUserSeeder::class);
+        $this->call(MasterDataSeeder::class);
 
-    User::factory()->create(['english_level_id' => EnglishLevel::first()->id]);
+        User::factory()->create(['english_level_id' => EnglishLevel::first()->id]);
     }
 }
