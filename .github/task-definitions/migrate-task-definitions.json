@@ -13,7 +13,7 @@
       "name": "migrate",
       "image": "${APP_ECR_ACCOUNT_URL}/${PROJECT}/${ENV}/migration:${SHA1}",
       "essential": true,
-      "command": ["php", "artisan", "migrate", "--force"],
+      "command": ["sh", "-c", "php artisan migrate --force && php artisan db:seed --class=MasterDataSeeder --force"],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
