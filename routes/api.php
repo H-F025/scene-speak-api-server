@@ -10,12 +10,15 @@ use App\Http\Controllers\LearningSessionController;
 use App\Http\Controllers\ReviewSetController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\SpeechAnswerController;
+use App\Http\Controllers\PrivacyPolicyController;
 
 Route::prefix('v1')->group(function () {
     Route::prefix('auth')->group(function () {
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login', [AuthController::class, 'login']);
     });
+
+    Route::get('privacy-policy', [PrivacyPolicyController::class, 'show']);
 
     Route::middleware('auth')->group(function () {
         Route::prefix('auth')->group(function () {
