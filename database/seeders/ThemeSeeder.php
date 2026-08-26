@@ -55,6 +55,11 @@ class ThemeSeeder extends Seeder
                 'description' => '行きたい場所への行き方を英語で尋ねよう',
                 'sort_order' => 7,
             ],
+            [
+                'name' => '病院で症状を伝える',
+                'description' => '体調不良を英語で伝えて、診察や薬について相談しよう',
+                'sort_order' => 8,
+            ],
         ];
         foreach ($themes as $theme) {
             Theme::updateOrCreate(
@@ -117,6 +122,12 @@ class ThemeSeeder extends Seeder
                 'estimated_minutes' => 10,
                 'sort_order' => 7,
             ],
+            [
+                'theme_name' => '病院で症状を伝える',
+                'english_level_code' => 'beginner',
+                'estimated_minutes' => 10,
+                'sort_order' => 8,
+            ],
             // 中級
             [
                 'theme_name' => 'カフェで注文',
@@ -160,6 +171,12 @@ class ThemeSeeder extends Seeder
                 'estimated_minutes' => 15,
                 'sort_order' => 7,
             ],
+            [
+                'theme_name' => '病院で症状を伝える',
+                'english_level_code' => 'intermediate',
+                'estimated_minutes' => 15,
+                'sort_order' => 8,
+            ],
             // 上級
             [
                 'theme_name' => 'カフェで注文',
@@ -202,6 +219,12 @@ class ThemeSeeder extends Seeder
                 'english_level_code' => 'advanced',
                 'estimated_minutes' => 18,
                 'sort_order' => 7,
+            ],
+            [
+                'theme_name' => '病院で症状を伝える',
+                'english_level_code' => 'advanced',
+                'estimated_minutes' => 18,
+                'sort_order' => 8,
             ],
         ];
         foreach ($themeLevels as $themeLevel) {
